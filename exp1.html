@@ -1,0 +1,191 @@
+<html>
+<head>
+    <meta charset="utf-8"/>
+    <title>经过两点的弧线</title>
+    <link rel="stylesheet" href="https://unpkg.com/bootstrap@4.0.0/dist/css/bootstrap.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.1.0/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.1.0/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-curve@1.0.0/leaflet.curve.js"></script>
+    <style>
+        #map {
+            width: 100%;
+            height: 400px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div>
+        <input type="text" id="x1" placeholder="x1">
+        <input type="text" id="y1" placeholder="y1">
+        <input type="text" id="x2" placeholder="x2">
+        <input type="text" id="y2" placeholder="y2">
+        <button id="crossPoint" onclick="on_PB_CrossPoint()">cross point</button>
+        <p id="result2"></p>
+    </div>
+    <div>
+        <input type="text" id="x3" placeholder="x1" value="15.427083333333334">
+        <input type="text" id="y3" placeholder="y1" value="93.43229166666667">
+        <input type="text" id="x4" placeholder="x2" value="14.833333333333334">
+        <input type="text" id="y4" placeholder="y2" value="92.75520833333333">
+        <input type="text" id="offset" placeholder="offset" value="0.3466198478593559">
+        <button id="offsetPoint2" onclick="on_PB_OffsetPoint()">offset point</button>
+        <p id="result3"></p>
+    </div>
+    <div>
+        <input type="text" id="x5" placeholder="x1" value="15.427083333333334">
+        <input type="text" id="y5" placeholder="y1" value="93.43229166666667">
+        <input type="text" id="x6" placeholder="x2" value="13.8125">
+        <input type="text" id="y6" placeholder="y2" value="95.05338541666667">
+        <input type="text" id="offset2" placeholder="offset" value="0.8806415411141064">
+        <button id="offsetPoint" onclick="on_PB_OffsetPoint2()">offset point</button>
+        <p id="result4"></p>
+    </div>
+    <div class="row">
+        <div id="map"></div>
+    </div>
+</div>
+
+</body>
+<script>
+    var map = L.map('map').setView([28.735308, 77.52496], 9);
+
+    L.tileLayer('http://{s}.tile.osm.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://osm.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    // 获得中垂线交叉点的坐标
+    function PB_CrossPoint(x1, y1, x2, y2) {
+        x1 = parseFloat(x1);
+        x2 = parseFloat(x2);
+        y1 = parseFloat(y1);
+        y2 = parseFloat(y2);
+
+        const x = Math.abs(x1 - x2);
+        const y = Math.abs(y1 - y2);
+
+        let x3 = x1 < x2 ? (x1 + x / 2) : (x1 - x / 2);
+        let y3 = y1 < y2 ? (y1 + y / 2) : (y1 - y / 2);
+
+        return [x3, y3];
+    }
+
+    function PB_OffsetPoint(x1, y1, x2, y2, offset) {
+        x1 = parseFloat(x1);
+        x2 = parseFloat(x2);
+        y1 = parseFloat(y1);
+        y2 = parseFloat(y2);
+        offset = parseFloat(offset);
+
+        const crossPoint = PB_CrossPoint(x1, y1, x2, y2);
+        const x3 = crossPoint[0];
+        const y3 = crossPoint[1];
+        const xLen = Math.abs(x1 - x2);
+        const yLen = Math.abs(y1 - y2);
+        const r = Math.sqrt(Math.pow(xLen, 2) + Math.pow(yLen, 2));
+        const xOffset = yLen / r * offset;
+        const yOffset = xLen / r * offset;
+        let newX = 0;
+        let newY = 0;
+        if ((x1 < x2 && y1 < y2) || (x1 > x2 && y1 > y2)) {
+            newX = x3 + xOffset;
+            newY = y3 - yOffset;
+        } else if ((x1 < x2 && y1 > y2) && (x1 > x2 && y1 < y2)) {
+            newX = x3 + xOffset;
+            newY = y3 + yOffset;
+        } else {
+            newX = x3 + xOffset;
+            newY = y3 + yOffset;
+        }
+
+        return [newX, newY];
+    }
+
+    function on_PB_CrossPoint() {
+        const x1 = document.getElementById('x1').value;
+        const y1 = document.getElementById('y1').value;
+        const x2 = document.getElementById('x2').value;
+        const y2 = document.getElementById('y2').value;
+
+        const rlt = PB_CrossPoint(parseFloat(x1), parseFloat(y1), parseFloat(x2), parseFloat(y2));
+        document.getElementById('result2').innerText = rlt.join(',');
+    }
+
+    function on_PB_OffsetPoint() {
+        const x1 = document.getElementById('x3').value;
+        const y1 = document.getElementById('y3').value;
+        const x2 = document.getElementById('x4').value;
+        const y2 = document.getElementById('y4').value;
+        const offset = document.getElementById('offset').value;
+
+        const crossPoint = PB_CrossPoint(x1, y1, x2, y2);
+        const offsetPoint = PB_OffsetPoint(x1, y1, x2, y2, offset);
+        const offsetPoint2 = PB_OffsetPoint(x1, y1, x2, y2, offset * 4 / 3);
+
+        document.getElementById('result3').innerText = crossPoint.join(',');
+        document.getElementById('result3').innerText += ' ~ ';
+        document.getElementById('result3').innerText += offsetPoint.join(',');
+
+        const latlngs1 = [
+            [x1, y1],
+            [x2, y2]
+        ];
+        const polyline1 = L.polyline(latlngs1, {color: 'green'}).addTo(map);
+
+        const latlngs2 = [
+            [crossPoint[0], crossPoint[1]],
+            [offsetPoint[0], offsetPoint[1]]
+        ];
+        L.polyline(latlngs2, {color: 'red'}).addTo(map);
+        const latlngs3 = [
+            'M',
+            [x1, y1],
+            'C',
+            [offsetPoint2[0], offsetPoint2[1]],
+            [offsetPoint2[0], offsetPoint2[1]],
+            [x2, y2]
+        ];
+        L.curve(latlngs3, {color: 'yellow'}).addTo(map);
+        map.fitBounds(polyline1.getBounds());
+    }
+
+    function on_PB_OffsetPoint2() {
+        const x1 = document.getElementById('x5').value;
+        const y1 = document.getElementById('y5').value;
+        const x2 = document.getElementById('x6').value;
+        const y2 = document.getElementById('y6').value;
+        const offset = document.getElementById('offset2').value;
+
+        const crossPoint = PB_CrossPoint(x1, y1, x2, y2);
+        const offsetPoint = PB_OffsetPoint(x1, y1, x2, y2, offset);
+        const offsetPoint2 = PB_OffsetPoint(x1, y1, x2, y2, offset * 4 / 3);
+
+        document.getElementById('result4').innerText = crossPoint.join(',');
+        document.getElementById('result4').innerText += ' ~ ';
+        document.getElementById('result4').innerText += offsetPoint.join(',');
+
+        const latlngs1 = [
+            [x1, y1],
+            [x2, y2]
+        ];
+        const polyline1 = L.polyline(latlngs1, {color: 'green'}).addTo(map);
+
+        const latlngs2 = [
+            [crossPoint[0], crossPoint[1]],
+            [offsetPoint[0], offsetPoint[1]]
+        ];
+        L.polyline(latlngs2, {color: 'red'}).addTo(map);
+        const latlngs3 = [
+            'M',
+            [x1, y1],
+            'C',
+            [offsetPoint2[0], offsetPoint2[1]],
+            [offsetPoint2[0], offsetPoint2[1]],
+            [x2, y2]
+        ];
+        L.curve(latlngs3, {color: 'yellow'}).addTo(map);
+        map.fitBounds(polyline1.getBounds());
+    }
+
+</script>
+</html>
